@@ -41,7 +41,7 @@ client.parse_mode = CustomMarkdown()
 
 from thefuzz import fuzz
 
-no_auth_users = [8175563348]
+no_auth_users = []
 user_status = {}
 
 
@@ -252,7 +252,7 @@ async def handle_callback_query(event):
 
 async def main():
     init_db()
-    await client.start(bot_token="8525044552:AAGMODxbLcto0UMc4YWN-fT1eyMxCqFF6Mo")
+    await client.start(bot_token="your token")
     await client.run_until_disconnected()
 
 
