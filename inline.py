@@ -112,13 +112,16 @@ async def get_all_title():
     return [row[1] for row in rows]
 
 
-async def get_id_by_title(title):
+async def get_id_by_title(title, typeof):
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute('''SELECT * FROM memes WHERE Title = ?''', (title,))
-    rows = cursor.fetchall()
+    cursor.execute(
+        '''SELECT ID FROM memes WHERE Title = ? AND typeof = ?''',
+        (title, typeof)
+    )
+    row = cursor.fetchone()
     conn.close()
-    for row in rows:
+    if row:
         return row[0]
     return None
 
@@ -141,6 +144,14 @@ async def get_title_of_meme(ID):
     return row[1]
 
 
+async def get_type_by_title(title):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute('''SELECT * FROM memes WHERE Title = ?''', (title,))
+    rows = cursor.fetchall()
+    conn.close()
+    return [row[2] for row in rows]
+
 @client.on(events.NewMessage(pattern="/add"))
 async def add_handle(event):
     global user_status
@@ -161,16 +172,14 @@ async def handler(event):
     if st["step"] == "sending meme" and event.message.document:
         st["file_path"] = await client.download_media(event.message)
         st["step"] = "sending text"
-        for attr in event.message.document.attributes:
-            if isinstance(attr, DocumentAttributeVideo):
-                st["typeof"] = "video"
-            elif isinstance(attr, DocumentAttributeAudio):
-                if attr.voice:
-                    st["typeof"] = "voice"
-            else:
-                await client.send_message(event.chat.id, "نوع فایل پشتیبانی نمی‌شود [❌](emoji/6298671811345254603)")
-                del user_status[event.sender_id]
-                return
+        if event.message.media.video:
+            st["typeof"] = "video"
+        elif event.message.media.voice:
+                st["typeof"] = "voice"
+        else:
+            await client.send_message(event.chat.id, "نوع فایل پشتیبانی نمی‌شود [❌](emoji/6298671811345254603)")
+            del user_status[event.sender_id]
+            return
         await client.send_message(event.chat.id, "حالا اسم میم رو ارسال کن [✔](emoji/6296367896398399651)")
     elif st["step"] == "sending text" and event.message.text:
         if event.sender_id in no_auth_users:
@@ -210,17 +219,21 @@ async def handle_inline(event):
     channel = await client.get_input_entity("YOUR_ARCHIVE_CHANNEL")
     titles = await get_all_title()
     matched_titles = []
-    matched_ids = []
+    matched_ids = set()
     meme_to_show = []
     for title in titles:
         score = fuzz.token_sort_ratio(event.text, title)
         if score >= 50:
             matched_titles.append(title)
     for title in matched_titles:
-        matched = await get_id_by_title(title)
-        matched_ids.append(matched)
-    memes = await client.get_messages(channel, ids=matched_ids)
+        the_type = await get_type_by_title(title)
+        for t in the_type:
+            ids = await get_id_by_title(title, t)
+            matched_ids.add(ids)
+    memes = await client.get_messages(channel, ids=list(matched_ids))
     for meme in memes:
+        if not meme:
+            continue
         meme_type = await get_type_of_meme(meme.id)
         meme_title = await get_title_of_meme(meme.id)
         meme_to_show.append(InputBotInlineResultDocument(id=str(random.randint(1, 9999)), type=str(meme_type), title=str(meme_title), document=get_input_document(meme.document), send_message=InputBotInlineMessageMediaAuto(message="")))
