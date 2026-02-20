@@ -218,18 +218,19 @@ async def handle_inline(event):
     text = event.text
     channel = await client.get_input_entity("YOUR_ARCHIVE_CHANNEL")
     titles = await get_all_title()
-    matched_titles = []
-    matched_ids = set()
+    matched_titles = {}
+    matched_ids = []
     meme_to_show = []
     for title in titles:
         score = fuzz.token_sort_ratio(event.text, title)
         if score >= 50:
-            matched_titles.append(title)
-    for title in matched_titles:
+            matched_titles[title] = score
+    sorted_titles = sorted(matched_titles.keys(), key=lambda k: matched_titles[k], reverse=True)
+    for title in sorted_titles:
         the_type = await get_type_by_title(title)
         for t in the_type:
             ids = await get_id_by_title(title, t)
-            matched_ids.add(ids)
+            matched_ids.append(ids)
     memes = await client.get_messages(channel, ids=list(matched_ids))
     for meme in memes:
         if not meme:
