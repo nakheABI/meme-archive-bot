@@ -252,11 +252,9 @@ async def handle_inline(event):
     matched_titles = {}
     matched_ids = []
     meme_to_show = []
-    meme_to_show_recent = []
     # This is related to user recents so the program shows the latest used memes.
-    # I don't know how this work it should not cause we are not declaring any event.answer for it.
-    # However it works perfectly fine and as far as I know it is NOT device related.
-    # Let me know if you have any idea how this works.
+    # Good news it now does what it is supposed to do structurally.
+    # It is a possible Telegram bug but at least its fixed now.
     if text == "":
         recents = await get_recent_memes(event.sender_id)
         if recents:
@@ -265,26 +263,26 @@ async def handle_inline(event):
             memes = await client.get_messages(channel, ids=matched_ids)
             for meme in memes:
                 meme_title  = await get_title_of_meme(meme.id)
-                meme_type = (await get_type_by_title(meme_title))[0]
-                meme_to_show_recent.append(InputBotInlineResultDocument(id=str(random.randint(1, 9999999)), type=meme_type, title=str(meme_title), document=get_input_document(meme.document), send_message=InputBotInlineMessageMediaAuto(message="")))
-    # This is just the normal search flow and there is nothing wired about it.
-    for title in titles:
-        score = fuzz.token_sort_ratio(event.text, title)
-        if score >= 50:
-            matched_titles[title] = score
-    sorted_titles = sorted(matched_titles.keys(), key=lambda k: matched_titles[k], reverse=True)
-    for title in sorted_titles:
-        the_type = await get_type_by_title(title)
-        for t in the_type:
-            ids = await get_id_by_title(title, t)
-            matched_ids.append(ids)
-    memes = await client.get_messages(channel, ids=list(matched_ids))
-    for meme in memes:
-        if not meme:
-            continue
-        meme_type = await get_type_of_meme(meme.id)
-        meme_title = await get_title_of_meme(meme.id)
-        meme_to_show.append(InputBotInlineResultDocument(id=str(meme.id), type=str(meme_type), title=str(meme_title), document=get_input_document(meme.document), send_message=InputBotInlineMessageMediaAuto(message="")))
+                meme_type = await get_type_of_meme(meme.id)
+                meme_to_show.append(InputBotInlineResultDocument(id=str(random.randint(1, 9999999)), type=meme_type, title=str(meme_title), document=get_input_document(meme.document), send_message=InputBotInlineMessageMediaAuto(message="")))
+    else:
+        for title in titles:
+            score = fuzz.token_sort_ratio(event.text, title)
+            if score >= 50:
+                matched_titles[title] = score
+        sorted_titles = sorted(matched_titles.keys(), key=lambda k: matched_titles[k], reverse=True)
+        for title in sorted_titles:
+            the_type = await get_type_by_title(title)
+            for t in the_type:
+                ids = await get_id_by_title(title, t)
+                matched_ids.append(ids)
+        memes = await client.get_messages(channel, ids=list(matched_ids))
+        for meme in memes:
+            if not meme:
+                continue
+            meme_type = await get_type_of_meme(meme.id)
+            meme_title = await get_title_of_meme(meme.id)
+            meme_to_show.append(InputBotInlineResultDocument(id=str(meme.id), type=str(meme_type), title=str(meme_title), document=get_input_document(meme.document), send_message=InputBotInlineMessageMediaAuto(message="")))
     await event.answer(meme_to_show)
 
 
