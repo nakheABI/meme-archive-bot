@@ -295,7 +295,7 @@ async def handle_inline(event):
             for meme in memes:
                 meme_title  = await get_title_of_meme(meme.id)
                 meme_type = await get_type_of_meme(meme.id)
-                meme_to_show.append(InputBotInlineResultDocument(id=str(random.randint(1, 9999999)), type=meme_type, title=str(meme_title), document=get_input_document(meme.document), send_message=InputBotInlineMessageMediaAuto(message="")))
+                meme_to_show.append(InputBotInlineResultDocument(id=str(meme.id), type=meme_type, title=str(meme_title), document=get_input_document(meme.document), send_message=InputBotInlineMessageMediaAuto(message="")))
         # Handling most used suggestions
         most_used = await get_most_used()
         if most_used:
@@ -308,7 +308,7 @@ async def handle_inline(event):
                     continue
                 meme_title = await get_title_of_meme(meme.id)
                 meme_type = await get_type_of_meme(meme.id)
-                meme_to_show.append(InputBotInlineResultDocument(id=str(random.randint(1, 9999999)), type=meme_type,
+                meme_to_show.append(InputBotInlineResultDocument(id=str(meme.id), type=meme_type,
                                                                  title=str(meme_title),
                                                                  document=get_input_document(meme.document),
                                                                  send_message=InputBotInlineMessageMediaAuto(
