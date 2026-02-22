@@ -79,6 +79,18 @@ def init_db():
     meme_id INTEGER NOT NULL,
     used_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)
     """)
+    conn.execute("""CREATE TABLE IF NOT EXISTS used
+                    (
+                        meme_id
+                        INTEGER
+                        PRIMARY
+                        KEY,
+                        amount_used
+                        INTEGER
+                        NOT
+                        NULL
+                    )
+                 """)
     cursor = conn.cursor()
     cursor.execute("SELECT ID FROM memes WHERE ID = 1")
     exists = cursor.fetchone()
@@ -178,6 +190,23 @@ async def get_recent_memes(user_id, limit=200):
     if rows:
         return [row["meme_id"] for row in rows]
     return None
+# DB function to get the most used memes
+async def get_most_used(limit=10):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""SELECT meme_id FROM used GROUP BY meme_id ORDER BY SUM(amount_used) DESC LIMIT ?""", (limit,))
+    rows = cursor.fetchall()
+    conn.close()
+    if rows:
+        return [row["meme_id"] for row in rows]
+    return None
+# DB function add 1 to amount_used column of a meme (or insert it)
+async def add_most_used(meme_id):
+    conn = get_connection()
+    conn.execute("""INSERT INTO used (meme_id, amount_used) VALUES (?, 1) ON CONFLICT(meme_id)
+        DO UPDATE SET amount_used = amount_used + 1""", (meme_id,))
+    conn.commit()
+    conn.close()
 
 # The add command
 @client.on(events.NewMessage(pattern="/add"))
@@ -252,6 +281,7 @@ async def handle_inline(event):
     titles = await get_all_title()
     matched_titles = {}
     matched_ids = []
+    matched_most_used_ids = []
     meme_to_show = []
     # This is related to user recents so the program shows the latest used memes.
     # Good news it now does what it is supposed to do structurally.
@@ -266,6 +296,23 @@ async def handle_inline(event):
                 meme_title  = await get_title_of_meme(meme.id)
                 meme_type = await get_type_of_meme(meme.id)
                 meme_to_show.append(InputBotInlineResultDocument(id=str(random.randint(1, 9999999)), type=meme_type, title=str(meme_title), document=get_input_document(meme.document), send_message=InputBotInlineMessageMediaAuto(message="")))
+        # Handling most used suggestions
+        most_used = await get_most_used()
+        if most_used:
+            for used in most_used:
+                if used not in matched_ids:
+                    matched_most_used_ids.append(used)
+            memes = await client.get_messages(channel, ids=matched_most_used_ids)
+            for meme in memes:
+                if not meme:
+                    continue
+                meme_title = await get_title_of_meme(meme.id)
+                meme_type = await get_type_of_meme(meme.id)
+                meme_to_show.append(InputBotInlineResultDocument(id=str(random.randint(1, 9999999)), type=meme_type,
+                                                                 title=str(meme_title),
+                                                                 document=get_input_document(meme.document),
+                                                                 send_message=InputBotInlineMessageMediaAuto(
+                                                                     message="")))
     else:
         for title in titles:
             score = fuzz.token_sort_ratio(event.text, title)
@@ -329,7 +376,7 @@ async def handle_choice(update):
         user_id = update.user_id
         meme_id = update.id
         await update_recents(user_id, meme_id)
-        print("done")
+        await add_most_used(meme_id)
 
 
 async def main():
