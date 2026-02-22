@@ -164,7 +164,7 @@ async def update_recents(user_id, meme_id):
     conn.close()
 
 # DB function to get the memes that the user recently used.
-async def get_recent_memes(user_id, limit=10):
+async def get_recent_memes(user_id, limit=200):
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute("""
@@ -284,6 +284,9 @@ async def handle_inline(event):
             meme_type = await get_type_of_meme(meme.id)
             meme_title = await get_title_of_meme(meme.id)
             meme_to_show.append(InputBotInlineResultDocument(id=str(meme.id), type=str(meme_type), title=str(meme_title), document=get_input_document(meme.document), send_message=InputBotInlineMessageMediaAuto(message="")))
+    # This part is related to the pagination logic
+    # Basically the user can scroll for up than 200 results (changeable to any value)
+    # The bot is no more limited to show 50 results at maximum
     result = meme_to_show[offset: offset + 50]
     if offset + 50 < len(meme_to_show):
         next_offset = offset + 50
