@@ -247,6 +247,7 @@ async def handler(event):
 @client.on(events.InlineQuery())
 async def handle_inline(event):
     text = event.text
+    offset = int(event.offset) if event.offset else 0
     channel = await client.get_input_entity("YOUR-ARCHIVE-CHANNEL")
     titles = await get_all_title()
     matched_titles = {}
@@ -283,7 +284,16 @@ async def handle_inline(event):
             meme_type = await get_type_of_meme(meme.id)
             meme_title = await get_title_of_meme(meme.id)
             meme_to_show.append(InputBotInlineResultDocument(id=str(meme.id), type=str(meme_type), title=str(meme_title), document=get_input_document(meme.document), send_message=InputBotInlineMessageMediaAuto(message="")))
-    await event.answer(meme_to_show)
+    result = meme_to_show[offset: offset + 50]
+    if offset + 50 < len(meme_to_show):
+        next_offset = offset + 50
+    else:
+        next_offset = ""
+    if next_offset:
+        await event.answer(result, next_offset=str(next_offset))
+    else:
+        await event.answer(result)
+
 
 
 @client.on(events.CallbackQuery())
