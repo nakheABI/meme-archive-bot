@@ -6,7 +6,8 @@ import random
 from telethon.extensions import markdown
 from telethon.tl.functions.messages import SendMessageRequest
 from telethon.tl.types import InputBotInlineResultDocument, InputWebDocument, InputBotInlineMessageText, \
-    InputBotInlineResult, InputBotInlineMessageMediaAuto, KeyboardButtonStyle, UpdateBotInlineSend
+    InputBotInlineResult, InputBotInlineMessageMediaAuto, KeyboardButtonStyle, UpdateBotInlineSend, \
+    InlineQueryPeerTypeSameBotPM
 from telethon.utils import get_input_document
 from telethon.tl.types import DocumentAttributeVideo, DocumentAttributeAudio
 
@@ -218,6 +219,64 @@ async def add_handle(event):
     await client.send_message(event.chat.id, "لطفاً میم رو بدون کپشن ارسال کن [✔️](emoji/6296367896398399651)")
     user_status[event.sender_id] = {"step": "sending meme", "file_path": None, "typeof": None, "title": None} #  here we store the user info in the dict
 
+@client.on(events.NewMessage(pattern="/start"))
+async def start(event):
+    the_text = """سلام❤️
+به ربات مخبر میم خوش اومدی! اگه برات سوال پیش اومده مخبر میم چیه یا چطوری میتونی ازش استفاده کنی اینجا رو بخون🔥"""
+    def utf16_len(s: str) -> int:
+        return len(s.encode("utf-16-le")) // 2
+    def utf16_index(s: str, i: int) -> int:
+        return utf16_len(s[:i])
+    bold_message = the_text.index(the_text)
+    heart_emoji = the_text.index("❤️")
+    fire_emoji = the_text.index("🔥")
+    url_message = the_text.index("اینجا")
+    go_add_btn = KeyboardButtonStyle(
+        bg_primary=True,
+        icon=5416117059207572332
+    )
+    inline_switch_btn = KeyboardButtonStyle(
+        bg_success=True,
+        icon=5460795800101594035
+    )
+    go_owner_btn = KeyboardButtonStyle(
+        bg_danger=True,
+        icon=6294184536888578755
+    )
+    go_btn = types.KeyboardButtonCallback(
+        text="اضافه کردن میم",
+        data=b"add",
+        style=go_add_btn
+    )
+    switch_btn = types.KeyboardButtonSwitchInline(
+        same_peer=True,
+        text="استفاده از ربات",
+        query="دارن میزنن",
+        peer_types=[InlineQueryPeerTypeSameBotPM()],
+        style=inline_switch_btn
+    )
+    owner_btn = types.KeyboardButtonUrl(
+        text="ارتباط با سازنده",
+        url="https://t.me/nakheABI",
+        style=go_owner_btn
+    )
+    mark = types.ReplyInlineMarkup(rows=[types.KeyboardButtonRow(buttons=[go_btn]), types.KeyboardButtonRow(buttons=[switch_btn]), types.KeyboardButtonRow(buttons=[owner_btn])])
+    entities = [
+        types.MessageEntityBold(offset=utf16_index(the_text, bold_message), length=utf16_len(the_text)),
+        types.MessageEntityCustomEmoji(offset=utf16_index(the_text, heart_emoji), length=utf16_len("❤️"), document_id=6294094007567913865),
+        types.MessageEntityCustomEmoji(offset=utf16_index(the_text, fire_emoji), length=utf16_len("🔥"), document_id=5424972470023104089),
+        types.MessageEntityTextUrl(offset=utf16_index(the_text, url_message), length=utf16_len("اینجا"), url="https://t.me/mokhber_meme/5"),
+    ]
+    await client(SendMessageRequest(
+        peer=event.chat.id,
+        message="""سلام❤️
+به ربات مخبر میم خوش اومدی! اگه برات سوال پیش اومده مخبر میم چیه یا چطوری میتونی ازش استفاده کنی اینجا رو بخون🔥""",
+        reply_markup=mark,
+        entities=entities,
+        random_id=random.getrandbits(63),
+        no_webpage=True
+    ))
+
 @client.on(events.NewMessage(incoming=True))
 async def handler(event):
     global user_status
@@ -368,6 +427,8 @@ async def handle_callback_query(event):
             return
         del user_status[user_id]
         await client.send_message(user_id, "درخواست شما رد شد [❌](emoji/6298671811345254603)")
+    elif data == "add":
+        await add_handle(event)
 # With this we can find what result the user chose.
 # make sure to enable inline feedback in bot father and do not forget to set it to 100%.
 @client.on(events.Raw())
