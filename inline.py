@@ -352,6 +352,8 @@ async def handle_inline(event):
                 matched_ids.append(recent)
             memes = await client.get_messages(channel, ids=matched_ids)
             for meme in memes:
+                if not meme:
+                    continue
                 meme_title  = await get_title_of_meme(meme.id)
                 meme_type = await get_type_of_meme(meme.id)
                 meme_to_show.append(InputBotInlineResultDocument(id=str(meme.id), type=meme_type, title=str(meme_title), document=get_input_document(meme.document), send_message=InputBotInlineMessageMediaAuto(message="")))
