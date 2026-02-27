@@ -331,9 +331,10 @@ async def handler(event):
             await client.send_message(event.chat.id, "درخواستت برای بررسی ارسال شد [✅](emoji/6296367896398399651)")
             st["step"] = "pending"
 
-
+caption = ""
 @client.on(events.InlineQuery())
 async def handle_inline(event):
+    global caption
     text = event.text
     offset = int(event.offset) if event.offset else 0
     channel = await client.get_input_entity("YOUR-ARCHIVE-CHANNEL")
@@ -342,10 +343,16 @@ async def handle_inline(event):
     matched_ids = []
     matched_most_used_ids = []
     meme_to_show = []
+    caption = ""
+    search_text = text.split("@ ")[0]
+    if "@" in text and len(text.split("@ ")) > 1:
+        to_text = text.split("@ ")[1]
+        for te in to_text.split("\n"):
+            caption = caption + te + "\n"
     # This is related to user recents so the program shows the latest used memes.
     # Good news it now does what it is supposed to do structurally.
     # It is a possible Telegram bug but at least its fixed now.
-    if text == "":
+    if search_text == "":
         recents = await get_recent_memes(event.sender_id)
         if recents:
             for recent in recents:
@@ -356,7 +363,7 @@ async def handle_inline(event):
                     continue
                 meme_title  = await get_title_of_meme(meme.id)
                 meme_type = await get_type_of_meme(meme.id)
-                meme_to_show.append(InputBotInlineResultDocument(id=str(meme.id), type=meme_type, title=str(meme_title), document=get_input_document(meme.document), send_message=InputBotInlineMessageMediaAuto(message="")))
+                meme_to_show.append(InputBotInlineResultDocument(id=str(meme.id), type=meme_type, title=str(meme_title), document=get_input_document(meme.document), send_message=InputBotInlineMessageMediaAuto(message=caption)))
         # Handling most used suggestions
         most_used = await get_most_used()
         if most_used:
@@ -391,7 +398,7 @@ async def handle_inline(event):
                 continue
             meme_type = await get_type_of_meme(meme.id)
             meme_title = await get_title_of_meme(meme.id)
-            meme_to_show.append(InputBotInlineResultDocument(id=str(meme.id), type=str(meme_type), title=str(meme_title), document=get_input_document(meme.document), send_message=InputBotInlineMessageMediaAuto(message="")))
+            meme_to_show.append(InputBotInlineResultDocument(id=str(meme.id), type=str(meme_type), title=str(meme_title), document=get_input_document(meme.document), send_message=InputBotInlineMessageMediaAuto(message=caption)))
     # This part is related to the pagination logic
     # Basically the user can scroll for up than 200 results (changeable to any value)
     # The bot is no more limited to show 50 results at maximum
